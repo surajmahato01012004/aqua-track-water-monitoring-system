@@ -14,7 +14,7 @@
 
     <nav class="navbar navbar-dark bg-primary mb-4">
         <div class="container">
-            <a class="navbar-brand" href="{{ url_for('home') }}">AquaTrack</a>
+            <a class="navbar-brand" href="{{ url_for('home') }}">Aqua Track: Water Quality Monitoring System</a>
             <div class="d-flex gap-2">
                 <a class="btn {{ 'btn-light' if request.endpoint == 'dashboard' else 'btn-outline-light' }}" href="{{ url_for('dashboard') }}">Dashboard</a>
                 <a class="btn {{ 'btn-light' if request.endpoint == 'home' else 'btn-outline-light' }}" href="{{ url_for('home') }}">Calculator</a>

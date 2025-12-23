@@ -1,184 +1,140 @@
-# AquaTrack WQI
+# Aqua Track: Water Quality Monitoring System
 
-A Flask application that computes and visualizes Water Quality Index (WQI). It supports manual WQI calculation, a location-based WQI system backed by SQLite via SQLAlchemy, a Google Map UI showing the WQI at stored locations, and a database dashboard with CRUD for locations and samples.
+A full-stack Flask application to compute, visualize, and manage Water Quality Index (WQI) across locations, with an AI chatbot, interactive map, downloadable reports, and an animated water-themed UI.
 
-## Features
-- Manual WQI calculator page (`/`) using existing logic
-- Location-based WQI with `Location` and `WaterSample` tables (SQLite + SQLAlchemy)
-- API for nearest WQI and listing all locations
-- Google Maps page (`/map`) showing colored markers and click-to-query nearest WQI
-- Database page (`/data`) for CRUD operations on locations and samples
-- Demo seed endpoint for Kolkata water bodies
+**Key Features**
+- WQI calculator with chart and status badges on `/` (templates/index.html).
+- Location and sample management with CRUD on `/data` (templates/data.html).
+- Interactive WQI map using Google Maps on `/map` (templates/map.html).
+- Dashboard landing page with quick links and a scrolling hardware banner on `/dashboard` (templates/dashboard.html).
+- AI chatbot page (templates/chatbot.html) with a server endpoint at `/chat` and optional external backend.
+- CSV/Excel export including temperature via `/download_excel`.
+- Auto-migration that adds a `temperature` column for backward compatibility.
+- Consistent 5-tier WQI scale and colors across UI and APIs.
+- Animated moving water background with high-contrast content layer.
 
-## Project Structure
-- `app.py`: Flask app, SQLAlchemy models, routes, APIs, WQI logic
-- `templates/`:
-  - `index.html`: Calculator page
-  - `map.html`: Google Map page
-  - `data.html`: Database dashboard with CRUD
-  - `dashboard.html`: Landing dashboard with links
-- `static/`:
-  - `script.js`: Calculator chart rendering
-  - `map.js`: Map initialization, markers, API calls
-- `data/wqi.db`: SQLite database file (auto-created)
-- `requirements.txt`: Dependencies
-- `Procfile`: Deployment entry for Gunicorn
+**Project Structure**
+- `app.py` — Flask app, models, routes, APIs, WQI and status logic.
+- `templates/` — Jinja2 templates extending `layout.html` with Bootstrap 5.
+- `static/` — Frontend assets (`script.js`, `map.js`, `chatbot.js`, CSS, water background animation).
+- `data/wqi.db` — SQLite database (auto-created locally).
+- `requirements.txt` — Python dependencies.
+- `Procfile` — Production entry (`gunicorn app:app`).
+- `docs/` — Additional documentation:
+  - `technical_overview.md` — Architecture, tech stack choices, chatbot details.
+  - `page_functions.md` — Each page’s functions and relationships.
+  - `limitations.md` — System and chatbot caveats with improvement plan.
+  - `interview_qna.md` — 50 deep questions and answers.
+ 
+**Detailed Structure**
+- Pages
+  - `templates/layout.html` base layout, navbar, assets
+  - `templates/index.html` calculator
+  - `templates/map.html` WQI map
+  - `templates/data.html` CRUD dashboard
+  - `templates/dashboard.html` landing dashboard
+  - `templates/chatbot.html` AI chatbot UI
+- JavaScript
+  - `static/script.js` calculator chart and status
+  - `static/map.js` map and API integration
+  - `static/chatbot.js` chat UI and backend calls
+  - `static/js/global_ripple.js` animated background canvas
+- Styles
+  - `static/style.css` site stylesheet and contrast, background
+- Data
+  - `data/wqi.db` local SQLite file
+- Docs
+  - `docs/*.md` documentation set
 
-## Setup
-- Install dependencies:
-  - `pip install -r requirements.txt`
-- Set environment for Google Maps:
-  - `GOOGLE_MAPS_API_KEY=<your_api_key>`
-- Start the app:
-  - `python app.py`
+**Setup**
+- Install: `pip install -r requirements.txt`
+- Environment:
+  - `GOOGLE_MAPS_API_KEY` for the map page.
+  - `HUGGING_FACE_API_TOKEN` for the `/chat` endpoint.
+  - `HF_CHAT_MODEL` optional, defaults to `HuggingFaceTB/SmolLM3-3B:hf-inference` (app.py:237).
+  - `DATABASE_URL` optional (Postgres). Falls back to SQLite (app.py:22–25, 26–37).
+- Run: `python app.py` → `http://127.0.0.1:5000/`
+ 
+**Local Development**
+- Create venv (optional) and install dependencies: `pip install -r requirements.txt`
+- Set environment variables if needed:
+  - Windows PowerShell:
+    - `$env:GOOGLE_MAPS_API_KEY="<api_key>"`
+    - `$env:HUGGING_FACE_API_TOKEN="<hf_token>"`
+    - `$env:HF_CHAT_MODEL="HuggingFaceTB/SmolLM3-3B:hf-inference"`
+- Start server: `python app.py`
 - Open:
-  - Calculator: `http://127.0.0.1:5000/`
-  - Dashboard: `http://127.0.0.1:5000/dashboard`
-  - Map: `http://127.0.0.1:5000/map`
-  - Database: `http://127.0.0.1:5000/data`
+  - `http://127.0.0.1:5000/` calculator
+  - `http://127.0.0.1:5000/dashboard` dashboard
+  - `http://127.0.0.1:5000/map` map
+  - `http://127.0.0.1:5000/data` database
+  - `http://127.0.0.1:5000/chatbot.html` chatbot
 
-## Database Design
-- `Location`:
-  - `id`, `latitude`, `longitude`, `name`
-  - Relationship: `samples` to `WaterSample`
-- `WaterSample`:
-  - `id`, `location_id`, `ph`, `do`, `tds`, `turbidity`, `nitrate`, `wqi`, `timestamp`
-- Tables are created automatically on app start. The DB file is stored in `data/wqi.db` under the project directory for local development.
+**Data Model**
+- `Location` (app.py:79–85): `id`, `latitude`, `longitude`, `name`, `samples` relationship.
+- `WaterSample` (app.py:87–98): `id`, `location_id`, `ph`, `do`, `tds`, `turbidity`, `nitrate`, `temperature`, `wqi`, `timestamp`.
+- `IoTReading` (app.py:100–105): prototype table for sensor ingestion.
+- Auto-migration adds `temperature` if missing (app.py:41–55).
+ 
+**Database Details**
+- Default: SQLite stored at `data/wqi.db`
+- External: Provide `DATABASE_URL` (Postgres recommended in production)
+- Auto-migration:
+  - On startup, adds `temperature FLOAT` column to `water_samples` if not present
+- Indexes:
+  - `latitude`, `longitude`, `timestamp`, and `wqi` columns indexed for typical queries
+- Migrations:
+  - For production, adopt `Flask-Migrate` to manage schema updates
 
-## WQI Logic
-- The calculator uses parameter configs for `ph`, `tds`, `do`, `turbidity`, `nitrate`, computing a weighted index.
-- Status categories:
-  - `0–25` Excellent (`success`)
-  - `26–50` Good (`primary`)
-  - `51–75` Poor (`warning`)
-  - `76–100` Very Poor (`danger`)
-  - `>100` Unfit (`dark`)
-- The same category colors are used in the map markers and badges across the app to keep the UX consistent.
+**WQI Logic**
+- Core function (app.py:117–173) computes dynamic weights from standards and applies per-parameter `Qi`. Temperature uses absolute deviation from ideal (app.py:157–161).
+- Status mapping (app.py:176–188):
+  - 0–25 Excellent (`success`)
+  - 26–50 Good (`primary`)
+  - 51–75 Poor (`warning`)
+  - 76–100 Very Poor (`danger`)
+  - >100 Unfit (`dark`)
 
-## WQI Formula
-- Per-parameter quality index \(Q_i\) for a parameter with observed value \(V_o\), ideal value \(V_i\), and standard \(S\):
-  \[
-  Q_i = 100 \times \frac{V_o - V_i}{S - V_i}
-  \]
-- Special handling for Dissolved Oxygen (DO):
-  - If \(V_o \ge S\):
-    \[
-    Q_i = 100 \times \left(1 - \frac{V_o}{V_i}\right)
-    \]
-  - Else:
-    \[
-    Q_i = 100 + 100 \times \frac{S - V_o}{S}
-    \]
-- Clamp \(Q_i\) to be non-negative: \(Q_i = \max(0, Q_i)\)
-- Weighted WQI:
-  \[
-  \mathrm{WQI} = \frac{\sum_i W_i \cdot Q_i}{\sum_i W_i}
-  \]
-- Parameter configuration (standards \(S\), ideals \(V_i\), weights \(W_i\)):
-  - pH: \(S=8.5,\ V_i=7.0,\ W=4\)
-  - TDS: \(S=500,\ V_i=0,\ W=1\)
-  - DO: \(S=5.0,\ V_i=14.6,\ W=5\)
-  - Turbidity: \(S=5.0,\ V_i=0,\ W=3\)
-  - Nitrate: \(S=45,\ V_i=0,\ W=2\)
+**UI and UX**
+- `layout.html` provides navbar, global animated background, and high-contrast content container.
+- Chart rendering and status badges on calculator (`static/script.js`).
+- Map markers colored by WQI status (`static/map.js`).
+- Chatbot cleans model outputs and enforces send delay (`static/chatbot.js`).
 
-## APIs
-- `GET /api/wqi?lat=<latitude>&lng=<longitude>`:
-  - Finds the nearest stored location using Haversine distance
-  - Retrieves the latest sample
-  - Computes WQI if missing
-  - Returns JSON: `latitude`, `longitude`, `wqi`, `status`, `color`
-- `GET /api/locations`:
-  - Lists all locations with their latest WQI (computed if missing)
-  - Returns JSON items: `name`, `latitude`, `longitude`, `wqi`, `status`, `color`
-- CRUD:
-  - `POST /data/location` create location
-  - `POST /data/location/<id>/delete` delete location
-  - `POST /data/sample` create sample
-  - `POST /data/sample/<id>/update` update sample
-  - `POST /data/sample/<id>/delete` delete sample
-- Seed:
-  - `POST /seed/kolkata` inserts demo locations and samples in Kolkata
+**APIs and Pages**
+- Pages:
+  - `/` calculator (app.py:200–206)
+  - `/dashboard` dashboard (app.py:208–210)
+  - `/map` map (app.py:212–215)
+  - `/data` database view (app.py:356–405)
+  - `/chatbot.html` chatbot view (app.py:217–219)
+- APIs:
+  - `POST /calculate` returns `wqi`, `status`, `color` (app.py:445–452).
+  - `GET /api/locations` latest WQI per location (app.py:454–495).
+  - `GET /api/wqi?lat&lng` nearest location WQI (app.py:613–642).
+  - CRUD: `/data/location`, `/data/location/<id>/delete`, `/data/sample`, `/data/sample/<id>/update` (app.py:497–566).
+  - Export: `GET /download_excel` (app.py:406–446).
+  - Chat: `POST /chat` using Hugging Face router (app.py:221–352).
 
-## Endpoints (Complete)
-- UI pages:
-  - `GET /` calculator page
-  - `GET /dashboard` dashboard with links
-  - `GET /map` Google Maps WQI view
-  - `GET /data` database dashboard with CRUD
-- Calculation:
-  - `POST /calculate`
-    - Body JSON: `{ "ph": <float>, "do": <float>, "turbidity": <float>, "tds": <float>, "nitrate": <float> }`
-    - Returns: `{ "wqi": <number>, "status": <string>, "color": <string> }`
-- Location APIs:
-  - `GET /api/locations` list all locations with latest WQI
-  - `GET /api/wqi?lat=<latitude>&lng=<longitude>` nearest location’s latest WQI
-- CRUD APIs:
-  - `POST /data/location` create location
-  - `POST /data/location/<id>/delete` delete location
-  - `POST /data/sample` create sample (for a location)
-  - `POST /data/sample/<id>/update` update sample
-  - `POST /data/sample/<id>/delete` delete sample
-- Seed:
-  - `POST /seed/kolkata` insert demo locations and samples for Kolkata
-- IoT ingestion:
-  - `GET /api/iot` inspect latest readings
-  - `POST /api/iot`
-    - Body JSON: `{ "temperature_c": <float>, "turbidity_percent": <float> }`
-    - Returns: `{ "status": "ok", "id": <int>, "timestamp": "<ISO8601>" }`
-  - Render URL for ESP32:
-    - `https://wqi-hxhz.onrender.com/api/iot`
-    - Example (ESP32 or Postman):
-      - `POST https://wqi-hxhz.onrender.com/api/iot` with JSON body above
+**Deployment**
+- Local SQLite for development; prefer managed Postgres in production.
+- Configure environment variables on the platform (Render, etc.).
+- Use `gunicorn` with `Procfile` for production.
+ 
+**Render Deployment**
+- Prerequisites:
+  - Create a Render Web Service
+  - Set environment variables:
+    - `DATABASE_URL` (managed Postgres)
+    - `GOOGLE_MAPS_API_KEY`
+    - `HUGGING_FACE_API_TOKEN`
+    - `HF_CHAT_MODEL` (optional)
+- Build & Start:
+  - Uses `requirements.txt` for install
+  - Start command via `Procfile`: `gunicorn app:app`
+- Notes:
+  - Use Postgres to avoid ephemeral filesystem issues
+  - Verify `/download_excel` in Render; large exports may need streaming
 
-## Google Map Workflow
-- The page `templates/map.html` loads the Google Maps API with your `GOOGLE_MAPS_API_KEY` and includes `static/map.js`.
-- On page load, `map.js`:
-  - Initializes the map centered on India
-  - Calls `GET /api/locations` to fetch all stored locations
-  - Renders a circle marker per location. Marker color is derived from the WQI category:
-    - `success` `#28a745`
-    - `info` `#17a2b8`
-    - `warning` `#ffc107`
-    - `orange` `#fd7e14`
-    - `danger` `#343a40`
-  - Clicking a marker opens an info window showing the location’s name, coordinates, WQI, and status.
-- Clicking anywhere on the map triggers a request to `GET /api/wqi?lat=...&lng=...`:
-  - The server picks the nearest location by Haversine distance, fetches the latest sample, computes WQI if needed, and returns WQI with `status` and `color`.
-  - The page highlights the nearest location by dropping a larger marker and opens its info window, panning/zooming to it.
-
-## Database Page Workflow
-- `templates/data.html` shows a table of locations with their latest sample and WQI.
-- Actions:
-  - Add Location by name and coordinates
-  - Add Sample by selecting location and entering parameters
-  - Update Sample inline for the latest sample
-  - Delete Sample
-  - Delete Location (cascades and removes samples)
-  - Seed demo data for Kolkata
-
-## Demo Data
-- Seed Kolkata water bodies:
-  - PowerShell:
-    - `Invoke-RestMethod -Method Post -Uri http://127.0.0.1:5000/seed/kolkata`
-  - The database page also includes a “Seed Kolkata Samples” button
-
-## Deployment Notes
-- SQLite is convenient for local development but not ideal for Render:
-  - The filesystem is ephemeral and may reset
-  - Concurrency and scaling limitations
-- For production on Render:
-  - Use managed PostgreSQL and set `SQLALCHEMY_DATABASE_URI` to a Postgres URL
-  - Consider adding migrations (e.g., Flask-Migrate)
-  - Keep the app behind Gunicorn using `Procfile`
-  - Ensure `GOOGLE_MAPS_API_KEY` is configured
-
-## Extensibility
-- The design is modular:
-  - ORM models and business logic are separate from UI templates
-  - Color and category mapping is consistent and reusable
-  - APIs return simple JSON contracts for mobile or sensors
-- To extend:
-  - Add auth for admin CRUD
-  - Add pagination and filtering
-  - Add bulk import for locations/samples (CSV/JSON)
-  - Switch to Postgres with geospatial indexing for nearest queries
+**Further Reading**
+- See `docs/technical_overview.md`, `docs/page_functions.md`, `docs/limitations.md`
