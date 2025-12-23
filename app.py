@@ -201,7 +201,7 @@ def chat():
                     {"role": "system", "content": system_prefix},
                     {"role": "user", "content": user_message},
                 ],
-                "max_tokens": 1000,
+                "max_tokens": 2000,
                 "temperature": 0.7,
             },
             timeout=60,
@@ -229,7 +229,7 @@ def chat():
                             {"role": "system", "content": system_prefix},
                             {"role": "user", "content": user_message},
                         ],
-                        "max_tokens": 1000,
+                        "max_tokens": 2000,
                         "temperature": 0.7,
                     },
                     timeout=60,
@@ -249,7 +249,16 @@ def chat():
                 return jsonify({"error": "Invalid response from chat service"}), 502
             if not content:
                 content = "No answer available."
+            
+            # Check for incomplete finish
+            finish_reason = (
+                data.get("choices", [{}])[0]
+                .get("finish_reason", "")
+            )
             content = clean_response(content)
+            if finish_reason == "length":
+                content += "\n\n(Note: My response was cut off because it reached the maximum length.)"
+                
             return jsonify({"reply": content})
         return jsonify({"error": "Chat service failed", "detail": resp.text}), 502
 
@@ -260,12 +269,18 @@ def chat():
             .get("message", {})
             .get("content", "")
         )
+        finish_reason = (
+            data.get("choices", [{}])[0]
+            .get("finish_reason", "")
+        )
     except Exception:
         return jsonify({"error": "Invalid response from chat service"}), 502
 
     if not content:
         content = "No answer available."
     content = clean_response(content)
+    if finish_reason == "length":
+        content += "\n\n(Note: My response was cut off because it reached the maximum length.)"
 
     return jsonify({"reply": content})
 
